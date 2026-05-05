@@ -45,15 +45,20 @@ pipeline {
                     if (fileExists('docker-compose.yml')) {
                         bat 'docker-compose build'
                         // Uncomment to run containers
-                        // bat 'docker-compose up -d'
+                        // bowlsll 'docker-compose up -d'
                     }
                 }
             }
         }
     }
-    post {
-        always {
-            cleanWs()
+  post {
+    always {
+        script {
+            try {
+                deleteDir()
+            } catch (e) {
+                echo "Cleanup failed: ${e}"
+            }
         }
     }
 }
