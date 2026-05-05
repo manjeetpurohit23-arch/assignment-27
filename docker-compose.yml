@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  database:
+    image: mongo:6-jammy
+    container_name: school_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: school_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://database:27017/school_management
+    depends_on:
+      - database
+    # Volumes mapping to enable hot-reloading of code without rebuilding
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: school_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    # Volumes mapping to enable hot-reloading of code without rebuilding
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    # Windows/WSL environments sometimes require polling for file changes
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+volumes:
+  mongodb_data:
