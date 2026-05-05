@@ -1,47 +1,59 @@
 pipeline {
     agent any
 
+    environment {
+        BACKEND_DIR = 'backend'
+        FRONTEND_DIR = 'frontend'
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the source code from the repository
                 checkout scm
             }
         }
-
-        stage('Stop Existing Containers') {
+        stage('Backend Install & Test') {
             steps {
-                echo 'Stopping any previously running containers...'
-                // Use "|| true" so the pipeline doesn't fail if no containers are running
-                bat 'docker compose down || echo No containers to stop'
+                dir(env.BACKEND_DIR) {
+                    script {
+                        if (fileExists('package.json')) {
+                            bat 'npm install'
+                            // Uncomment if you have tests
+                            // bat 'npm test'
+                        }
+                    }
+                }
             }
         }
-
-        stage('Build & Deploy Containers') {
+        stage('Frontend Install & Build') {
             steps {
-                echo 'Building and starting docker containers...'
-                bat 'docker compose up -d --build'
+                dir(env.FRONTEND_DIR) {
+                    script {
+                        if (fileExists('package.json')) {
+                            bat 'npm install'
+                            // Uncomment if you have tests
+                            // bat 'npm test'
+                            bat 'npm run build'
+                        }
+                    }
+                }
             }
         }
-
-        stage('Verify Running Containers') {
+        stage('Docker Build & Compose') {
             steps {
-                echo 'Checking running containers...'
-                bat 'docker compose ps'
+                script {
+                    if (fileExists('docker-compose.yml')) {
+                        bat 'docker-compose build'
+                        // Uncomment to run containers
+                        // bat 'docker-compose up -d'
+                    }
+                }
             }
         }
     }
-
     post {
         always {
-            echo 'Pipeline finished!'
-        }
-        success {
-            echo 'Successfully deployed the application!'
-        }
-        failure {
-            echo 'Deployment failed. Please check the logs.'
-            bat 'docker compose logs --tail=50 || echo Could not fetch logs'
+            cleanWs()
         }
     }
 }
