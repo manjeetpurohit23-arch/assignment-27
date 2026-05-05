@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // Define any environment variables here
-        // For example, node or docker paths if not in PATH
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -14,14 +9,25 @@ pipeline {
             }
         }
 
+        stage('Stop Existing Containers') {
+            steps {
+                echo 'Stopping any previously running containers...'
+                // Use "|| true" so the pipeline doesn't fail if no containers are running
+                bat 'docker compose down || echo No containers to stop'
+            }
+        }
+
         stage('Build & Deploy Containers') {
             steps {
-                // Assuming Jenkins has Docker & docker-compose installed and the user has permissions
                 echo 'Building and starting docker containers...'
-                // If using Windows Jenkins node with powershell:
-                // powershell 'docker-compose up -d --build'
-                // If using Linux:
-                sh 'docker-compose up -d --build'
+                bat 'docker compose up -d --build'
+            }
+        }
+
+        stage('Verify Running Containers') {
+            steps {
+                echo 'Checking running containers...'
+                bat 'docker compose ps'
             }
         }
     }
@@ -35,6 +41,7 @@ pipeline {
         }
         failure {
             echo 'Deployment failed. Please check the logs.'
+            bat 'docker compose logs --tail=50 || echo Could not fetch logs'
         }
     }
 }
